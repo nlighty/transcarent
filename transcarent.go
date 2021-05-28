@@ -16,6 +16,8 @@ import (
     "net/http"
     "encoding/json"
 
+    "golang.org/x/sync/errgroup"
+
     "github.com/rainycape/memcache"
     "github.com/gorilla/mux"
 )
@@ -58,16 +60,18 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 
 // This function is used to query the appropriate external API 
 // for data retrieval regarding the user and their posts
-func sendRequest(w http.ResponseWriter, q string) *http.Response {
+func sendRequest(w http.ResponseWriter, q string) (*http.Response, error) {
     var Errors jsonErrors
+
     resp, err := http.Get(q)
     if err != nil {
         glbErr = err
         log.Println(err)
         Errors.Message = "Error retrieving data from external API."
         json.NewEncoder(w).Encode(Errors)
+        return resp, err
     }
-    return resp
+    return resp, nil
 }
 
 /* userPage function contains the majority of the logical code
@@ -76,6 +80,8 @@ func sendRequest(w http.ResponseWriter, q string) *http.Response {
  */
 func userPage(w http.ResponseWriter, r *http.Request) {
     var Errors jsonErrors
+    var g errgroup.Group
+
     w.Header().Set("Content-Type", "application/json") // Set the header to return Json
     var Response response // Structure to contain the response data that will be displayed
     vars := mux.Vars(r) // Reads in the variables from the http request
@@ -99,14 +105,51 @@ func userPage(w http.ResponseWriter, r *http.Request) {
 
     // Set the queryString value to the URL to send the request
     queryString := fmt.Sprintf("https://jsonplaceholder.typicode.com/users/%s", id)
-    resp := sendRequest(w, queryString) // Send the GET request
-    defer resp.Body.Close() // Ensure we are cleaning up after ourselves
+    g.Go(func() error {
+        resp, sendErr := sendRequest(w, queryString) // Send the GET request
+        defer resp.Body.Close() // Ensure we are cleaning up after ourselves
+        if sendErr != nil {
+            return sendErr
+        }
+        bodyBytes, err := ioutil.ReadAll(resp.Body) // Read the response into a buffer
+        if err != nil {
+            log.Println(err)
+            Errors.Message = "Error reading response from external API."
+            json.NewEncoder(w).Encode(Errors)
+            glbErr = errors.New("Error reading response from external API.")
+            return err
+        }
+        json.Unmarshal(bodyBytes, &Response.User)
+        return nil
+    })
 
     // Set the queryString value for the next URL to send the request
     queryString2 := fmt.Sprintf("https://jsonplaceholder.typicode.com/posts?userId=%s", id)
-    resp2 := sendRequest(w, queryString2) // Send the GET request
-    defer resp2.Body.Close() // Ensure we clean up
+    g.Go(func() error {
+        resp, sendErr := sendRequest(w, queryString2) // Send the GET request
+        defer resp.Body.Close() // Ensure we clean up
+        if sendErr != nil {
+            return sendErr
+        }
+        bodyBytes, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+            log.Println(err)
+            Errors.Message = "Error reading response from external API."
+            json.NewEncoder(w).Encode(Errors)
+            glbErr = errors.New("Error reading response from external API.")
+            return err
+        }
+        json.Unmarshal(bodyBytes, &Response.Posts)
+        return nil
+    })
 
+    waitErr := g.Wait()
+    if waitErr != nil {
+        Errors.Message = "Received Error"
+        json.NewEncoder(w).Encode(Errors)
+        glbErr = errors.New("Received Error")
+    }
+/*
     bodyBytes, err3 := ioutil.ReadAll(resp.Body) // Read the response into a buffer
     if err3 != nil {
         log.Println(err3)
@@ -121,11 +164,11 @@ func userPage(w http.ResponseWriter, r *http.Request) {
         Errors.Message = "Error reading response from external API."
         json.NewEncoder(w).Encode(Errors)
         glbErr = errors.New("Error reading response from external API.")
-    }
+    }*/
 
     // Unmarshal the bytes data into the respective data structures for return
-    json.Unmarshal(bodyBytes, &Response.User)
-    json.Unmarshal(bodyBytes2, &Response.Posts)
+    //json.Unmarshal(bodyBytes, &Response.User)
+    //json.Unmarshal(bodyBytes2, &Response.Posts)
 
     if glbErr == nil {
         // Encode the json data into the webage
@@ -138,8 +181,8 @@ func userPage(w http.ResponseWriter, r *http.Request) {
 func handleRequests() {
     myRouter := mux.NewRouter().StrictSlash(true)
 
-    go myRouter.HandleFunc("/", homePage)
-    go myRouter.HandleFunc("/users/{id}", userPage)
+    myRouter.HandleFunc("/", homePage)
+    myRouter.HandleFunc("/users/{id}", userPage)
 
     log.Fatal(http.ListenAndServe(":10000", myRouter))
 }
