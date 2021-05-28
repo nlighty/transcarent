@@ -149,26 +149,6 @@ func userPage(w http.ResponseWriter, r *http.Request) {
         json.NewEncoder(w).Encode(Errors)
         glbErr = errors.New("Received Error")
     }
-/*
-    bodyBytes, err3 := ioutil.ReadAll(resp.Body) // Read the response into a buffer
-    if err3 != nil {
-        log.Println(err3)
-        Errors.Message = "Error reading response from external API."
-        json.NewEncoder(w).Encode(Errors)
-        glbErr = errors.New("Error reading response from external API.")
-    }
-
-    bodyBytes2, err4 := ioutil.ReadAll(resp2.Body) // Read the second response into a buffer
-    if err4 != nil {
-        log.Println(err4)
-        Errors.Message = "Error reading response from external API."
-        json.NewEncoder(w).Encode(Errors)
-        glbErr = errors.New("Error reading response from external API.")
-    }*/
-
-    // Unmarshal the bytes data into the respective data structures for return
-    //json.Unmarshal(bodyBytes, &Response.User)
-    //json.Unmarshal(bodyBytes2, &Response.Posts)
 
     if glbErr == nil {
         // Encode the json data into the webage
