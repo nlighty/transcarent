@@ -8,6 +8,8 @@ import (
     "net/http"
 )
 
+type CallAPI struct{}
+
 func TestHttpCall(t *testing.T) {
     var w http.ResponseWriter
     var u user
@@ -29,6 +31,9 @@ func TestHttpCall(t *testing.T) {
     for _, tc := range testTable {
         t.Run(tc.name, func(t *testing.T) {
             queryString := "https://jsonplaceholder.typicode.com/users/1"
+            sendRequestFunc = func(w http.ResponseWriter, q string) ([]byte, error) {
+                return byte[]("Example Return"), nil
+            }
             resp, err := sendRequestFunc(w, queryString)
             json.Unmarshal(resp, &u)
             if !reflect.DeepEqual(&u, tc.expectedResponse) {
@@ -40,4 +45,3 @@ func TestHttpCall(t *testing.T) {
         })
     }
 }
-

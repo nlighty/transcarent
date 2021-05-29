@@ -20,9 +20,6 @@ import (
     "github.com/gorilla/mux"
 )
 
-// Memcache client used to store data from previous requests to reduce latency
-var mc *memcache.Client
-
 // Struct to hold the user data response from the external API
 type user struct {
     Name string `json:"name"`
@@ -109,7 +106,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     // Set the queryString value to the URL to send the request
     queryString := fmt.Sprintf("https://jsonplaceholder.typicode.com/users/%s", id)
     g.Go(func() error {
-        resp, sendErr := sendRequest(w, queryString) // Send the GET request
+        resp, sendErr := sendRequestFunc(w, queryString) // Send the GET request
         if sendErr != nil {
             json.NewEncoder(w).Encode(sendErr)
             return sendErr
@@ -121,7 +118,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     // Set the queryString value for the next URL to send the request
     queryString2 := fmt.Sprintf("https://jsonplaceholder.typicode.com/posts?userId=%s", id)
     g.Go(func() error {
-        resp, sendErr := sendRequest(w, queryString2) // Send the GET request
+        resp, sendErr := sendRequestFunc(w, queryString2) // Send the GET request
         if sendErr != nil {
             json.NewEncoder(w).Encode(sendErr)
             return sendErr
