@@ -23,9 +23,6 @@ import (
 // Memcache client used to store data from previous requests to reduce latency
 var mc *memcache.Client
 
-// Global error to set if something goes wrong
-var glbErr error
-
 // Struct to hold the user data response from the external API
 type user struct {
     Name string `json:"name"`
@@ -59,23 +56,15 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 // This function is used to query the appropriate external API 
 // for data retrieval regarding the user and their posts
 func sendRequest(w http.ResponseWriter, q string) ([]byte, error) {
-    var Errors jsonErrors
-
     resp, err := http.Get(q)
     if err != nil {
-        glbErr = err
-        log.Println(err)
-        Errors.Message = "Error retrieving data from external API."
-        json.NewEncoder(w).Encode(Errors)
+        json.NewEncoder(w).Encode(err)
         return nil, err
     }
     defer resp.Body.Close() // Ensure we are cleaning up after ourselves
     bodyBytes, err := ioutil.ReadAll(resp.Body) // Read the response into a buffer
     if err != nil {
-        log.Println(err)
-        Errors.Message = "Error reading response from external API."
-        json.NewEncoder(w).Encode(Errors)
-        glbErr = errors.New("Error reading response from external API.")
+        json.NewEncoder(w).Encode(err)
         return nil, err
     }
     return bodyBytes, nil
@@ -86,8 +75,14 @@ func sendRequest(w http.ResponseWriter, q string) ([]byte, error) {
    It takes in an http Response Writer and an http Request.
  */
 func userPage(w http.ResponseWriter, r *http.Request) {
+    var glbErr error
     var Errors jsonErrors
     var g errgroup.Group
+
+    mc, err := memcache.New("127.0.0.1:11211") // Initiate the memcache
+    if err != nil {
+        fmt.Printf("%v\n", err)
+    }
 
     w.Header().Set("Content-Type", "application/json") // Set the header to return Json
     var Response response // Structure to contain the response data that will be displayed
@@ -95,10 +90,9 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     id := vars["id"] // Sets a local variable to the value of the id entered by the user
     idVal, _ := strconv.Atoi(id)
     if idVal < 1 || idVal > 10 {
-        log.Println("ID must be between 1 and 10.")
         Errors.Message = "ID must be between 1 and 10."
         json.NewEncoder(w).Encode(Errors)
-        glbErr = errors.New("ID must be between 1 and 10.")
+        glbErr = errors.New(Errors.Message)
     }
 
     listCached, cacheErr := mc.Get(fmt.Sprintf(id)) // Checks to see if the requested data
@@ -115,6 +109,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     g.Go(func() error {
         resp, sendErr := sendRequest(w, queryString) // Send the GET request
         if sendErr != nil {
+            json.NewEncoder(w).Encode(sendErr)
             return sendErr
         }
         json.Unmarshal(resp, &Response.User)
@@ -126,6 +121,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     g.Go(func() error {
         resp, sendErr := sendRequest(w, queryString2) // Send the GET request
         if sendErr != nil {
+            json.NewEncoder(w).Encode(sendErr)
             return sendErr
         }
         json.Unmarshal(resp, &Response.Posts)
@@ -134,16 +130,13 @@ func userPage(w http.ResponseWriter, r *http.Request) {
 
     waitErr := g.Wait()
     if waitErr != nil {
-        Errors.Message = "Received Error"
-        json.NewEncoder(w).Encode(Errors)
-        glbErr = errors.New("Received Error")
+        json.NewEncoder(w).Encode(waitErr)
+        glbErr = errors.New("An error occurred during the call to an external API.")
     }
 
     if glbErr == nil {
-        // Encode the json data into the webage
         json.NewEncoder(w).Encode(Response)
     }
-    glbErr = nil
 }
 
 // Function to route the web requests to the proper pages and start the local server
@@ -159,7 +152,7 @@ func handleRequests() {
 // main function to initiate the web server
 func main() {
     var err error
-    mc, err = memcache.New("127.0.0.1:11211") // Initiate the memcache
+
     if err != nil {
         log.Fatal(err)
     }
