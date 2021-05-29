@@ -78,7 +78,7 @@ func sendRequest(w http.ResponseWriter, q string) ([]byte, error) {
         glbErr = errors.New("Error reading response from external API.")
         return nil, err
     }
-    return bodyBytes, err
+    return bodyBytes, nil
 }
 
 /* userPage function contains the majority of the logical code
