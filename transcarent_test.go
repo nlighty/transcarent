@@ -9,7 +9,6 @@ import (
 )
 
 func TestHttpCall(t *testing.T) {
-    var capi CallAPI
     var w http.ResponseWriter
     testTable := []struct {
         name string
@@ -34,7 +33,7 @@ func TestHttpCall(t *testing.T) {
     for _, tc := range testTable {
         t.Run(tc.name, func(t *testing.T) {
             defer tc.server.Close()
-            resp, err := capi.SendRequest(w, tc.server.URL)
+            resp, err := sendRequest(w, tc.server.URL)
             if !reflect.DeepEqual(resp, tc.expectedResponse) {
                 t.Errorf("expected (%v), got (%v)", tc.expectedResponse, resp)
             }
