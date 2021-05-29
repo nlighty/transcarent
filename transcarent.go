@@ -70,6 +70,8 @@ func sendRequest(w http.ResponseWriter, q string) ([]byte, error) {
     return bodyBytes, nil
 }
 
+var sendRequestFunc = sendRequest
+
 /* userPage function contains the majority of the logical code
    for retrieving data from the appropriate external APIs.
    It takes in an http Response Writer and an http Request.

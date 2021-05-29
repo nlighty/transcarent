@@ -6,7 +6,6 @@ import (
     "testing"
     "encoding/json"
     "net/http"
-    "net/http/httptest"
 )
 
 func TestHttpCall(t *testing.T) {
@@ -14,16 +13,11 @@ func TestHttpCall(t *testing.T) {
     var u user
     testTable := []struct {
         name string
-        server *httptest.Server
         expectedResponse *user
         expectedErr error
     }{
         {
             name: "successful-request",
-            server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte(`{"name": "Leanne Graham", "username": "Bret", "email": "Sincere@april.biz"}`))
-            })),
             expectedResponse: &user{
                 Name: "Leanne Graham",
                 Username: "Bret",
@@ -34,8 +28,8 @@ func TestHttpCall(t *testing.T) {
     }
     for _, tc := range testTable {
         t.Run(tc.name, func(t *testing.T) {
-            defer tc.server.Close()
-            resp, err := sendRequest(w, tc.server.URL)
+            queryString := "https://jsonplaceholder.typicode.com/users/1"
+            resp, err := sendRequestFunc(w, queryString)
             json.Unmarshal(resp, &u)
             if !reflect.DeepEqual(&u, tc.expectedResponse) {
                 t.Errorf("expected (%v), got (%v)", tc.expectedResponse, u)
