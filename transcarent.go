@@ -20,10 +20,6 @@ import (
     "github.com/gorilla/mux"
 )
 
-type APICaller interface {
-    SendRequestFunc(w http.ResponseWriter, q string) ([]byte, error)
-}
-
 // Struct to hold the user data response from the external API
 type user struct {
     Name string `json:"name"`
@@ -81,7 +77,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     var glbErr error
     var Errors jsonErrors
     var g errgroup.Group
-    var caller APICaller
+    //var caller APICaller
 
     mc, err := memcache.New("127.0.0.1:11211") // Initiate the memcache
     if err != nil {
@@ -111,7 +107,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     // Set the queryString value to the URL to send the request
     queryString := fmt.Sprintf("https://jsonplaceholder.typicode.com/users/%s", id)
     g.Go(func() error {
-        resp, sendErr := caller.SendRequestFunc(w, queryString) // Send the GET request
+        resp, sendErr := sendRequestFunc(w, queryString) // Send the GET request
         if sendErr != nil {
             json.NewEncoder(w).Encode(sendErr)
             return sendErr
@@ -123,7 +119,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     // Set the queryString value for the next URL to send the request
     queryString2 := fmt.Sprintf("https://jsonplaceholder.typicode.com/posts?userId=%s", id)
     g.Go(func() error {
-        resp, sendErr := caller.SendRequestFunc(w, queryString2) // Send the GET request
+        resp, sendErr := sendRequestFunc(w, queryString2) // Send the GET request
         if sendErr != nil {
             json.NewEncoder(w).Encode(sendErr)
             return sendErr
