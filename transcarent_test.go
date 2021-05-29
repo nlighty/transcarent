@@ -2,8 +2,10 @@ package main
 
 import (
     "errors"
+    "io/ioutil"
     "reflect"
     "testing"
+    "encoding/json"
     "net/http"
     "net/http/httptest"
 )
@@ -34,7 +36,12 @@ func TestHttpCall(t *testing.T) {
         t.Run(tc.name, func(t *testing.T) {
             defer tc.server.Close()
             resp, err := sendRequest(w, tc.server.URL)
-            if !reflect.DeepEqual(resp, tc.expectedResponse) {
+            body, err := ioutil.ReadAll(resp.Body)
+            u := &user{}
+            if err := json.Unmarshal(body, u); err != nil {
+                t.Error("Failed to unmarshal the body.")
+            }
+            if !reflect.DeepEqual(u, tc.expectedResponse) {
                 t.Errorf("expected (%v), got (%v)", tc.expectedResponse, resp)
             }
             if !errors.Is(err, tc.expectedErr) {
