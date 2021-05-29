@@ -1,6 +1,4 @@
 /* This project is used to create a web server that will query other external
-
-
    APIs. The responses from the respective APIs will be stored into a single
    JSON object that will be served back to the requesting user.
  */
@@ -60,7 +58,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 
 // This function is used to query the appropriate external API 
 // for data retrieval regarding the user and their posts
-func sendRequest(w http.ResponseWriter, q string) (*http.Response, error) {
+func sendRequest(w http.ResponseWriter, q string) ([]byte, error) {
     var Errors jsonErrors
 
     resp, err := http.Get(q)
@@ -69,9 +67,18 @@ func sendRequest(w http.ResponseWriter, q string) (*http.Response, error) {
         log.Println(err)
         Errors.Message = "Error retrieving data from external API."
         json.NewEncoder(w).Encode(Errors)
-        return resp, err
+        return nil, err
     }
-    return resp, nil
+    defer resp.Body.Close() // Ensure we are cleaning up after ourselves
+    bodyBytes, err := ioutil.ReadAll(resp.Body) // Read the response into a buffer
+    if err != nil {
+        log.Println(err)
+        Errors.Message = "Error reading response from external API."
+        json.NewEncoder(w).Encode(Errors)
+        glbErr = errors.New("Error reading response from external API.")
+        return nil, err
+    }
+    return bodyBytes, err
 }
 
 /* userPage function contains the majority of the logical code
@@ -107,19 +114,10 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     queryString := fmt.Sprintf("https://jsonplaceholder.typicode.com/users/%s", id)
     g.Go(func() error {
         resp, sendErr := sendRequest(w, queryString) // Send the GET request
-        defer resp.Body.Close() // Ensure we are cleaning up after ourselves
         if sendErr != nil {
             return sendErr
         }
-        bodyBytes, err := ioutil.ReadAll(resp.Body) // Read the response into a buffer
-        if err != nil {
-            log.Println(err)
-            Errors.Message = "Error reading response from external API."
-            json.NewEncoder(w).Encode(Errors)
-            glbErr = errors.New("Error reading response from external API.")
-            return err
-        }
-        json.Unmarshal(bodyBytes, &Response.User)
+        json.Unmarshal(resp, &Response.User)
         return nil
     })
 
@@ -127,19 +125,10 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     queryString2 := fmt.Sprintf("https://jsonplaceholder.typicode.com/posts?userId=%s", id)
     g.Go(func() error {
         resp, sendErr := sendRequest(w, queryString2) // Send the GET request
-        defer resp.Body.Close() // Ensure we clean up
         if sendErr != nil {
             return sendErr
         }
-        bodyBytes, err := ioutil.ReadAll(resp.Body)
-        if err != nil {
-            log.Println(err)
-            Errors.Message = "Error reading response from external API."
-            json.NewEncoder(w).Encode(Errors)
-            glbErr = errors.New("Error reading response from external API.")
-            return err
-        }
-        json.Unmarshal(bodyBytes, &Response.Posts)
+        json.Unmarshal(resp, &Response.Posts)
         return nil
     })
 
