@@ -26,12 +26,6 @@ var mc *memcache.Client
 // Global error to set if something goes wrong
 var glbErr error
 
-type CallAPIInterface interface {
-    SendRequest(http.ResponseWriter, string) (*http.Response, error)
-}
-
-type CallAPI struct{}
-
 // Struct to hold the user data response from the external API
 type user struct {
     Name string `json:"name"`
@@ -64,7 +58,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 
 // This function is used to query the appropriate external API 
 // for data retrieval regarding the user and their posts
-func (c *CallAPI) SendRequest(w http.ResponseWriter, q string) (*http.Response, error) {
+func sendRequest(w http.ResponseWriter, q string) (*http.Response, error) {
     var Errors jsonErrors
 
     resp, err := http.Get(q)
@@ -85,7 +79,6 @@ func (c *CallAPI) SendRequest(w http.ResponseWriter, q string) (*http.Response, 
 func userPage(w http.ResponseWriter, r *http.Request) {
     var Errors jsonErrors
     var g errgroup.Group
-    var capi CallAPI
 
     w.Header().Set("Content-Type", "application/json") // Set the header to return Json
     var Response response // Structure to contain the response data that will be displayed
@@ -111,7 +104,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     // Set the queryString value to the URL to send the request
     queryString := fmt.Sprintf("https://jsonplaceholder.typicode.com/users/%s", id)
     g.Go(func() error {
-        resp, sendErr := capi.SendRequest(w, queryString) // Send the GET request
+        resp, sendErr := sendRequest(w, queryString) // Send the GET request
         defer resp.Body.Close() // Ensure we are cleaning up after ourselves
         if sendErr != nil {
             return sendErr
@@ -131,7 +124,7 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     // Set the queryString value for the next URL to send the request
     queryString2 := fmt.Sprintf("https://jsonplaceholder.typicode.com/posts?userId=%s", id)
     g.Go(func() error {
-        resp, sendErr := capi.SendRequest(w, queryString2) // Send the GET request
+        resp, sendErr := sendRequest(w, queryString2) // Send the GET request
         defer resp.Body.Close() // Ensure we clean up
         if sendErr != nil {
             return sendErr
