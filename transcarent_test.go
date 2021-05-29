@@ -1,6 +1,7 @@
 package main
 
 import (
+    "errors"
     "reflect"
     "testing"
     "net/http"
@@ -35,6 +36,9 @@ func TestHttpCall(t *testing.T) {
             defer tc.server.Close()
             resp, err := capi.SendRequest(w, tc.server.URL)
             if !reflect.DeepEqual(resp, tc.expectedResponse) {
+                t.Errorf("expected (%v), got (%v)", tc.expectedResponse, resp)
+            }
+            if !errors.Is(err, tc.expectedErr) {
                 t.Errorf("expected (%v), got (%v)", tc.expectedErr, err)
             }
         })
