@@ -22,14 +22,6 @@ func TestHttpCall(t *testing.T) {
     r, _ := http.NewRequest("GET", "/", nil)
     rr := httptest.NewRecorder()
 
-    /*var officialData = response {
-        User: user {
-            Name: "Leanne Graham",
-            Username: "Bret",
-            Email: "Sincere@april.biz",
-        },
-    }*/
-
     vars := map[string]string {
         "id": "1",
     }
