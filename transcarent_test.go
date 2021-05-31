@@ -1,9 +1,9 @@
 package main
 
 import (
-    "fmt"
     "testing"
     "encoding/json"
+    "io/ioutil"
     "net/http"
     "net/http/httptest"
 
@@ -15,6 +15,11 @@ type expected struct {
     Name string `json:"name"`
     Username string `json:"username"`
     Email string `json:"email"`
+}
+
+type officialResponse struct {
+    Userinfo user `json:"userinfo"`
+    Posts []posts `json:"posts"`
 }
 
 func TestHttpCall(t *testing.T) {
@@ -29,7 +34,7 @@ func TestHttpCall(t *testing.T) {
     testTable := []struct {
         name string
         mockFunc func()
-        expectedResponse *response
+        expectedResponse officialResponse
         expectedErr error
     }{
         {
@@ -45,13 +50,12 @@ func TestHttpCall(t *testing.T) {
                     return jsonObj, nil
                 }
             },
-            expectedResponse: &response {
-                User: user {
+            expectedResponse: officialResponse {
+                Userinfo: user {
                     Name: "Leanne Graham",
                     Username: "Bret",
                     Email: "Sincere@april.biz",
                 },
-                Posts: []posts {},
             },
             expectedErr: nil,
         },
@@ -63,8 +67,9 @@ func TestHttpCall(t *testing.T) {
             userPage(rr, r)
 
             assert.Equal(t, http.StatusOK, rr.Code)
-            fmt.Printf("%v\n\n", rr.Body)
-            assert.Equal(t, tc.expectedResponse, rr.Body)
+            b, _ := json.Marshal(tc.expectedResponse)
+            bodyBytes, _ := ioutil.ReadAll(rr.Body)
+            assert.Equal(t, b, bodyBytes)
         })
     }
 }
