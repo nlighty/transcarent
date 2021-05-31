@@ -1,49 +1,73 @@
 package main
 
 import (
-    "errors"
-    "reflect"
     "testing"
+    "strings"
     "encoding/json"
+    "io/ioutil"
     "net/http"
     "net/http/httptest"
+
+    "github.com/gorilla/mux"
+    "github.com/stretchr/testify/assert"
 )
 
+type expected struct {
+    Name string
+    Username string
+    Email string
+}
+
 func TestHttpCall(t *testing.T) {
-    var w http.ResponseWriter
-    var u user
+    r, _ := http.NewRequest("GET", "/", nil)
+    rr := httptest.NewRecorder()
+
+    /*var officialData = response {
+        User: user {
+            Name: "Leanne Graham",
+            Username: "Bret",
+            Email: "Sincere@april.biz",
+        },
+    }*/
+
+    vars := map[string]string {
+        "id": "1",
+    }
+    r = mux.SetURLVars(r, vars)
+
     testTable := []struct {
         name string
-        server *httptest.Server
-        expectedResponse *user
+        mockFunc func()
+        expectedResponse []byte
         expectedErr error
     }{
         {
             name: "successful-request",
-            server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte(`{"name": "Leanne Graham", "username": "Bret", "email": "Sincere@april.biz"}`))
-            })),
-            expectedResponse: &user{
-                Name: "Leanne Graham",
-                Username: "Bret",
-                Email: "Sincere@april.biz",
+            mockFunc: func() {
+                sendRequestFunc = func(w http.ResponseWriter, q string) ([]byte, error) {
+                    var Expected = &expected {
+                        Name: "Leanne Graham",
+                        Username: "Bret",
+                        Email: "Sincere@april.biz",
+                    }
+                    jsonObj, _ := json.Marshal(Expected)
+                    return jsonObj, nil
+                }
             },
+            expectedResponse: []byte(`{"userinfo":{"name":"Leanne Graham","username":"Bret","email":"Sincere@april.biz"},"posts":null}`),
             expectedErr: nil,
         },
     }
+
     for _, tc := range testTable {
         t.Run(tc.name, func(t *testing.T) {
-            defer tc.server.Close()
-            resp, err := sendRequest(w, tc.server.URL)
-            json.Unmarshal(resp, &u)
-            if !reflect.DeepEqual(&u, tc.expectedResponse) {
-                t.Errorf("expected (%v), got (%v)", tc.expectedResponse, u)
-            }
-            if !errors.Is(err, tc.expectedErr) {
-                t.Errorf("expected (%v), got (%v)", tc.expectedErr, err)
-            }
+            tc.mockFunc()
+            userPage(rr, r)
+
+            assert.Equal(t, http.StatusOK, rr.Code)
+            bodyBytes, _ := ioutil.ReadAll(rr.Body)
+            newString := strings.Replace(string(bodyBytes), "\n", "", -1)
+            assert.Equal(t, newString, string(tc.expectedResponse))
         })
     }
 }
-
