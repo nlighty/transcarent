@@ -1,9 +1,10 @@
 package main
 
 import (
-    "fmt"
     "testing"
+    "strings"
     "encoding/json"
+    "io/ioutil"
     "net/http"
     "net/http/httptest"
 
@@ -21,6 +22,14 @@ func TestHttpCall(t *testing.T) {
     r, _ := http.NewRequest("GET", "/", nil)
     rr := httptest.NewRecorder()
 
+    /*var officialData = response {
+        User: user {
+            Name: "Leanne Graham",
+            Username: "Bret",
+            Email: "Sincere@april.biz",
+        },
+    }*/
+
     vars := map[string]string {
         "id": "1",
     }
@@ -29,6 +38,7 @@ func TestHttpCall(t *testing.T) {
     testTable := []struct {
         name string
         mockFunc func()
+        expectedResponse []byte
         expectedErr error
     }{
         {
@@ -44,6 +54,7 @@ func TestHttpCall(t *testing.T) {
                     return jsonObj, nil
                 }
             },
+            expectedResponse: []byte(`{"userinfo":{"name":"Leanne Graham","username":"Bret","email":"Sincere@april.biz"},"posts":null}`),
             expectedErr: nil,
         },
     }
@@ -54,7 +65,9 @@ func TestHttpCall(t *testing.T) {
             userPage(rr, r)
 
             assert.Equal(t, http.StatusOK, rr.Code)
-            fmt.Printf("\n\n%v\n\n", rr.Body)
+            bodyBytes, _ := ioutil.ReadAll(rr.Body)
+            newString := strings.Replace(string(bodyBytes), "\n", "", -1)
+            assert.Equal(t, newString, string(tc.expectedResponse))
         })
     }
 }
