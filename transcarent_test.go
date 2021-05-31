@@ -18,7 +18,7 @@ type expected struct {
     Email string
 }
 
-func TestHttpCall(t *testing.T) {
+func TestUserPage(t *testing.T) {
     r, _ := http.NewRequest("GET", "/", nil)
     rr := httptest.NewRecorder()
 
