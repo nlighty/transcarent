@@ -22,11 +22,6 @@ func TestHttpCall(t *testing.T) {
     r, _ := http.NewRequest("GET", "/", nil)
     rr := httptest.NewRecorder()
 
-    vars := map[string]string {
-        "id": "1",
-    }
-    r = mux.SetURLVars(r, vars)
-
     testTable := []struct {
         name string
         mockFunc func()
@@ -49,11 +44,64 @@ func TestHttpCall(t *testing.T) {
             expectedResponse: []byte(`{"userinfo":{"name":"Leanne Graham","username":"Bret","email":"Sincere@april.biz"},"posts":null}`),
             expectedErr: nil,
         },
+        {
+            name: "id-too-low",
+            mockFunc: func() {
+                sendRequestFunc = func(w http.ResponseWriter, q string) ([]byte, error) {
+                    var Expected = &expected {
+                        Name: "Should Fail",
+                        Username: "With Error",
+                        Email: "idbetween1and10@gmail.com",
+                    }
+                    jsonObj, _ := json.Marshal(Expected)
+                    return jsonObj, nil
+                }
+            },
+            expectedResponse: []byte(`{"message":"ID must be between 1 and 10."}`),
+            expectedErr: nil,
+        },
+        {
+            name: "id-too-high",
+            mockFunc: func() {
+                sendRequestFunc = func(w http.ResponseWriter, q string) ([]byte, error) {
+                    var Expected = &expected {
+                        Name: "Should Fail",
+                        Username: "With Error",
+                        Email: "idbetween1and10@gmail.com",
+                    }
+                    jsonObj, _ := json.Marshal(Expected)
+                    return jsonObj, nil
+                }
+            },
+            expectedResponse: []byte(`{"message":"ID must be between 1 and 10."}`),
+            expectedErr: nil,
+        },
     }
 
-    for _, tc := range testTable {
+    for idx, tc := range testTable {
         t.Run(tc.name, func(t *testing.T) {
             tc.mockFunc()
+            switch {
+            case idx == 0:
+                vars := map[string]string {
+                    "id": "1",
+                }
+                r = mux.SetURLVars(r, vars)
+                break
+            case idx == 1:
+                vars := map[string]string {
+                    "id": "0",
+                }
+                r = mux.SetURLVars(r, vars)
+                break
+            case idx == 2:
+                vars := map[string]string {
+                    "id": "11",
+                }
+                r = mux.SetURLVars(r, vars)
+                break
+            }
+
             userPage(rr, r)
 
             assert.Equal(t, http.StatusOK, rr.Code)
