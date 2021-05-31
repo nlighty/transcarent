@@ -4,7 +4,6 @@ import (
     "fmt"
     "testing"
     "encoding/json"
-    "io/ioutil"
     "net/http"
     "net/http/httptest"
 
@@ -19,7 +18,6 @@ type expected struct {
 }
 
 func TestHttpCall(t *testing.T) {
-    var f interface{}
     r, _ := http.NewRequest("GET", "/", nil)
     rr := httptest.NewRecorder()
 
@@ -56,10 +54,7 @@ func TestHttpCall(t *testing.T) {
             userPage(rr, r)
 
             assert.Equal(t, http.StatusOK, rr.Code)
-            bodyBytes, _ := ioutil.ReadAll(rr.Body)
-            json.Unmarshal(bodyBytes, &f)
-            fmt.Printf("\n%v\n", f)
-            //assert.Equal(t, b, bodyBytes)*/
+            fmt.Printf("\n\n%v\n\n", rr.Body)
         })
     }
 }
