@@ -1,57 +1,53 @@
 package main
 
 import (
-    "errors"
-    "reflect"
+    "fmt"
     "testing"
     "encoding/json"
     "net/http"
+    "net/http/httptest"
+
+    "github.com/gorilla/mux"
+    "github.com/stretchr/testify/assert"
 )
 
 func TestHttpCall(t *testing.T) {
-    var w http.ResponseWriter
-    var u user
+    r, _ := http.NewRequest("GET", "/", nil)
+    rr := httptest.NewRecorder()
+
+    vars := map[string]string {
+        "id": "1",
+    }
+    r = mux.SetURLVars(r, vars)
 
     testTable := []struct {
         name string
         mockFunc func()
-        expectedResponse *user
         expectedErr error
     }{
         {
             name: "successful-request",
             mockFunc: func() {
                 sendRequestFunc = func(w http.ResponseWriter, q string) ([]byte, error) {
-                    /*var User = &user {
-                        Name: "Leanne Graham",
-                        Username: "Bret",
-                        Email: "Sincere@april.biz",
-                    }*/
-                    b := make([]byte, 5, 5)
-                    return b, nil
+                    slcA := []string{"Leanne Graham", "Bret", "Sincere@april.biz"}
+                    jsonObj, _ := json.Marshal(slcA)
+                    return jsonObj, nil
                 }
-            },
-            expectedResponse: &user{
-                Name: "Leanne Graham",
-                Username: "Bret",
-                Email: "Sincere@april.biz",
             },
             expectedErr: nil,
         },
     }
+
+    //expectedResponse := []string{"Leanne Graham", "Bret", "Sincere@april.biz"}
+
     for _, tc := range testTable {
         t.Run(tc.name, func(t *testing.T) {
             tc.mockFunc()
-            queryString := "https://jsonplaceholder.typicode.com/users/1"
-            //userPage(w, &r)
-            resp, err := sendRequestFunc(w, queryString)
-            json.Unmarshal(resp, &u)
-            if !reflect.DeepEqual(&u, tc.expectedResponse) {
-                t.Errorf("expected (%v), got (%v)", tc.expectedResponse, u)
-            }
-            if !errors.Is(err, tc.expectedErr) {
-                t.Errorf("expected (%v), got (%v)", tc.expectedErr, err)
-            }
+            userPage(rr, r)
+
+            assert.Equal(t, http.StatusOK, rr.Code)
+            fmt.Printf("%v\n\n", rr.Body)
+            //assert.Equal(t, expectedResponse, rr.Body)
         })
     }
 }

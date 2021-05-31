@@ -77,7 +77,6 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     var glbErr error
     var Errors jsonErrors
     var g errgroup.Group
-    //var caller APICaller
 
     mc, err := memcache.New("127.0.0.1:11211") // Initiate the memcache
     if err != nil {
