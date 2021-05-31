@@ -11,6 +11,12 @@ import (
     "github.com/stretchr/testify/assert"
 )
 
+type expected struct {
+    Name string `json:"name"`
+    Username string `json:"username"`
+    Email string `json:"email"`
+}
+
 func TestHttpCall(t *testing.T) {
     r, _ := http.NewRequest("GET", "/", nil)
     rr := httptest.NewRecorder()
@@ -23,22 +29,33 @@ func TestHttpCall(t *testing.T) {
     testTable := []struct {
         name string
         mockFunc func()
+        expectedResponse *response
         expectedErr error
     }{
         {
             name: "successful-request",
             mockFunc: func() {
                 sendRequestFunc = func(w http.ResponseWriter, q string) ([]byte, error) {
-                    slcA := []string{"Leanne Graham", "Bret", "Sincere@april.biz"}
-                    jsonObj, _ := json.Marshal(slcA)
+                    var Expected = &expected {
+                        Name: "Leanne Graham",
+                        Username: "Bret",
+                        Email: "Sincere@april.biz",
+                    }
+                    jsonObj, _ := json.Marshal(Expected)
                     return jsonObj, nil
                 }
+            },
+            expectedResponse: &response {
+                User: user {
+                    Name: "Leanne Graham",
+                    Username: "Bret",
+                    Email: "Sincere@april.biz",
+                },
+                Posts: []posts {},
             },
             expectedErr: nil,
         },
     }
-
-    //expectedResponse := []string{"Leanne Graham", "Bret", "Sincere@april.biz"}
 
     for _, tc := range testTable {
         t.Run(tc.name, func(t *testing.T) {
@@ -47,7 +64,7 @@ func TestHttpCall(t *testing.T) {
 
             assert.Equal(t, http.StatusOK, rr.Code)
             fmt.Printf("%v\n\n", rr.Body)
-            //assert.Equal(t, expectedResponse, rr.Body)
+            assert.Equal(t, tc.expectedResponse, rr.Body)
         })
     }
 }
