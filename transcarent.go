@@ -150,10 +150,5 @@ func handleRequests() {
 
 // main function to initiate the web server
 func main() {
-    var err error
-
-    if err != nil {
-        log.Fatal(err)
-    }
     handleRequests() // Start the server and prepare for incoming requests
 }
