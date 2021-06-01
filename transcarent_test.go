@@ -57,7 +57,7 @@ func TestUserPage(t *testing.T) {
                     return jsonObj, nil
                 }
             },
-            expectedResponse: []byte(`{"message":"ID must be between 1 and 10."}`),
+            expectedResponse: []byte(`{"message":"ID must be between 1 and 10."}500 - ID of user must be between 1 and 10.`),
             expectedErr: nil,
         },
         {
@@ -73,7 +73,7 @@ func TestUserPage(t *testing.T) {
                     return jsonObj, nil
                 }
             },
-            expectedResponse: []byte(`{"message":"ID must be between 1 and 10."}`),
+            expectedResponse: []byte(`{"message":"ID must be between 1 and 10."}500 - ID of user must be between 1 and 10.`),
             expectedErr: nil,
         },
     }

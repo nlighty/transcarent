@@ -6,7 +6,6 @@
 package main
 
 import (
-    "errors"
     "fmt"
     "log"
     "strconv"
@@ -74,7 +73,6 @@ var sendRequestFunc = sendRequest
    It takes in an http Response Writer and an http Request.
  */
 func userPage(w http.ResponseWriter, r *http.Request) {
-    var glbErr error
     var Errors jsonErrors
     var g errgroup.Group
 
@@ -91,7 +89,9 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     if idVal < 1 || idVal > 10 {
         Errors.Message = "ID must be between 1 and 10."
         json.NewEncoder(w).Encode(Errors)
-        glbErr = errors.New(Errors.Message)
+        w.WriteHeader(http.StatusInternalServerError)
+        w.Write([]byte("500 - ID of user must be between 1 and 10."))
+        return
     }
 
     listCached, cacheErr := mc.Get(fmt.Sprintf(id)) // Checks to see if the requested data
@@ -130,12 +130,12 @@ func userPage(w http.ResponseWriter, r *http.Request) {
     waitErr := g.Wait()
     if waitErr != nil {
         json.NewEncoder(w).Encode(waitErr)
-        glbErr = errors.New("An error occurred during the call to an external API.")
+        w.WriteHeader(http.StatusInternalServerError)
+        w.Write([]byte("500 - Error occured while trying to query external API."))
+        return
     }
 
-    if glbErr == nil {
-        json.NewEncoder(w).Encode(Response)
-    }
+    json.NewEncoder(w).Encode(Response)
 }
 
 // Function to route the web requests to the proper pages and start the local server
@@ -150,10 +150,5 @@ func handleRequests() {
 
 // main function to initiate the web server
 func main() {
-    var err error
-
-    if err != nil {
-        log.Fatal(err)
-    }
     handleRequests() // Start the server and prepare for incoming requests
 }
